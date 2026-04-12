@@ -20,7 +20,7 @@ import {
   FileText,
   Database
 } from 'lucide-react';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy, updateDoc, doc, deleteDoc, addDoc, where, getDocs, Timestamp } from 'firebase/firestore';
 import { Lead, Service, BlogPost } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +39,22 @@ export default function AdminDashboard() {
   const { logout } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
+    setConfirmModal({ isOpen: true, title, message, onConfirm });
+  };
 
   const sidebarLinks = [
     { name: 'Dashboard', path: '/admin-ddk/dashboard', icon: LayoutDashboard },
@@ -89,11 +105,11 @@ export default function AdminDashboard() {
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
           <Routes>
-            <Route path="/" element={<DashboardOverview />} />
-            <Route path="/leads" element={<LeadsManager />} />
-            <Route path="/services" element={<ServicesManager />} />
-            <Route path="/blog" element={<BlogManager />} />
-            <Route path="/content" element={<PageContentManager />} />
+            <Route path="/" element={<DashboardOverview showConfirm={showConfirm} />} />
+            <Route path="/leads" element={<LeadsManager showConfirm={showConfirm} />} />
+            <Route path="/services" element={<ServicesManager showConfirm={showConfirm} />} />
+            <Route path="/blog" element={<BlogManager showConfirm={showConfirm} />} />
+            <Route path="/content" element={<PageContentManager showConfirm={showConfirm} />} />
             <Route path="/settings" element={<SettingsManager />} />
           </Routes>
         </div>
@@ -106,11 +122,47 @@ export default function AdminDashboard() {
       >
         {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl border border-slate-100 flex flex-col gap-6"
+            >
+              <div className="flex flex-col gap-2">
+                <h3 className="text-2xl font-bold text-slate-900">{confirmModal.title}</h3>
+                <p className="text-slate-500 font-medium">{confirmModal.message}</p>
+              </div>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                  className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    confirmModal.onConfirm();
+                    setConfirmModal({ ...confirmModal, isOpen: false });
+                  }}
+                  className="flex-1 px-6 py-4 rounded-2xl font-bold bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg shadow-red-100"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function DashboardOverview() {
+function DashboardOverview({ showConfirm }: { showConfirm: (title: string, message: string, onConfirm: () => void) => void }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [services, setServices] = useState<Service[]>([]);
 
@@ -118,11 +170,15 @@ function DashboardOverview() {
     const qLeads = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
     const unsubLeads = onSnapshot(qLeads, (snapshot) => {
       setLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'leads');
     });
 
     const qServices = query(collection(db, 'services'), orderBy('order', 'asc'));
     const unsubServices = onSnapshot(qServices, (snapshot) => {
       setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'services');
     });
 
     return () => {
@@ -137,11 +193,95 @@ function DashboardOverview() {
     { label: 'Active Services', value: services.length, icon: Sparkles, color: 'bg-orange-100 text-orange-600' },
   ];
 
+  const seedAllData = async () => {
+    showConfirm(
+      'Seed All Data',
+      'This will initialize services, blog posts, and page content with sample data. Existing data will be preserved. Continue?',
+      async () => {
+        try {
+          toast.info('Starting seed process...');
+          
+          // Seed Services (if empty)
+          if (services.length === 0) {
+            const initialServices = [
+              {
+                title: 'Air Duct Cleaning',
+                shortDescription: 'Our comprehensive air duct cleaning removes dust, allergens, and microbial growth from your entire HVAC system.',
+                fullDescription: 'Our comprehensive air duct cleaning removes dust, allergens, and microbial growth from your entire HVAC system. We use state-of-the-art HEPA-filtered vacuums and specialized agitation tools to ensure every inch of your ductwork is pristine.',
+                benefits: ['Improved Air Quality', 'Energy Efficiency', 'Reduced Allergens', 'Extended HVAC Life'],
+                price: 'From $299',
+                iconName: 'Wind',
+                image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ec3?auto=format&fit=crop&q=80&w=1200',
+                color: 'bg-blue-50 text-blue-600',
+                ctaText: 'Book Now',
+                order: 0,
+                createdAt: new Date()
+              },
+              {
+                title: 'HVAC Restoration',
+                shortDescription: 'We restore your HVAC system to factory-new condition, improving performance and extending its lifespan.',
+                fullDescription: 'We restore your HVAC system to factory-new condition, improving performance and extending its lifespan. Our restoration process involves deep cleaning of coils, blowers, and internal components.',
+                benefits: ['System Longevity', 'Peak Performance', 'Cost Savings', 'Corrosion Protection'],
+                price: 'From $499',
+                iconName: 'Shield',
+                image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=1200',
+                color: 'bg-green-50 text-green-600',
+                ctaText: 'Book Now',
+                order: 1,
+                createdAt: new Date()
+              }
+            ];
+            for (const s of initialServices) {
+              await addDoc(collection(db, 'services'), s);
+            }
+          }
+
+          // Seed Page Content
+          const pages = ['homepage', 'about', 'contact'];
+          for (const page of pages) {
+            const docSnap = await getDocs(query(collection(db, 'page_content'), where('__name__', '==', page)));
+            if (docSnap.empty) {
+              // Basic seed for each page
+              let content = {};
+              if (page === 'homepage') {
+                content = {
+                  hero: { title: 'Breathe Cleaner Air', description: 'Professional air duct cleaning services.', badge: 'Certified Pros', image: 'https://picsum.photos/seed/hvac/1200/800' },
+                  stats: [{ label: 'Happy Clients', value: '5k+' }, { label: 'Years Exp', value: '15+' }, { label: 'Rating', value: '4.9/5' }]
+                };
+              } else if (page === 'about') {
+                content = { story: { title: 'Our Mission', description1: 'Dedicated to pure air.', image: 'https://picsum.photos/seed/about/800/600' } };
+              } else if (page === 'contact') {
+                content = { info: { title: 'Get in Touch', phone: '(800) 555-0199', email: 'info@aircarepro.com', address: '123 Air Way, Houston, TX' } };
+              }
+              await updateDoc(doc(db, 'page_content', page), content).catch(async () => {
+                const { setDoc } = await import('firebase/firestore');
+                await setDoc(doc(db, 'page_content', page), content);
+              });
+            }
+          }
+
+          toast.success('Initial data seeded successfully!');
+        } catch (error: any) {
+          console.error('Seed error:', error);
+          toast.error(`Seed failed: ${error.message}`);
+        }
+      }
+    );
+  };
+
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
-        <p className="text-slate-500 font-medium">Welcome back, Admin. Here's what's happening today.</p>
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
+          <p className="text-slate-500 font-medium">Welcome back, Admin. Here's what's happening today.</p>
+        </div>
+        <button
+          onClick={seedAllData}
+          className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+        >
+          <Database size={20} /> Seed All Data
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -199,7 +339,7 @@ function DashboardOverview() {
   );
 }
 
-function LeadsManager() {
+function LeadsManager({ showConfirm }: { showConfirm: (title: string, message: string, onConfirm: () => void) => void }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filter, setFilter] = useState('');
 
@@ -207,6 +347,8 @@ function LeadsManager() {
     const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snapshot) => {
       setLeads(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'leads');
     });
     return unsub;
   }, []);
@@ -216,19 +358,25 @@ function LeadsManager() {
       await updateDoc(doc(db, 'leads', id), { status });
       toast.success('Lead status updated!');
     } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `leads/${id}`);
       toast.error('Failed to update status.');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this lead?')) {
-      try {
-        await deleteDoc(doc(db, 'leads', id));
-        toast.success('Lead deleted!');
-      } catch (error) {
-        toast.error('Failed to delete lead.');
+    showConfirm(
+      'Delete Lead',
+      'Are you sure you want to delete this lead? This action cannot be undone.',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'leads', id));
+          toast.success('Lead deleted!');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `leads/${id}`);
+          toast.error('Failed to delete lead.');
+        }
       }
-    }
+    );
   };
 
   const filteredLeads = leads.filter(l => 
@@ -356,7 +504,7 @@ function LeadsManager() {
   );
 }
 
-function ServicesManager() {
+function ServicesManager({ showConfirm }: { showConfirm: (title: string, message: string, onConfirm: () => void) => void }) {
   const [services, setServices] = useState<Service[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -399,15 +547,19 @@ function ServicesManager() {
   }, [editingService, isModalOpen]);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this service?')) {
-      try {
-        await deleteDoc(doc(db, 'services', id));
-        toast.success('Service deleted!');
-      } catch (error: any) {
-        console.error('Error deleting service:', error);
-        toast.error(`Failed to delete service: ${error.message || 'Unknown error'}`);
+    showConfirm(
+      'Delete Service',
+      'Are you sure you want to delete this service? This action cannot be undone.',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'services', id));
+          toast.success('Service deleted!');
+        } catch (error: any) {
+          console.error('Error deleting service:', error);
+          toast.error(`Failed to delete service: ${error.message || 'Unknown error'}`);
+        }
       }
-    }
+    );
   };
 
   const handleSubmit = async (e: any) => {
@@ -448,89 +600,94 @@ function ServicesManager() {
   };
 
   const handleSeedServices = async () => {
+    const seed = async () => {
+      const initialServices = [
+        {
+          title: 'Air Duct Cleaning',
+          shortDescription: 'Our comprehensive air duct cleaning removes dust, allergens, and microbial growth from your entire HVAC system.',
+          fullDescription: 'Our comprehensive air duct cleaning removes dust, allergens, and microbial growth from your entire HVAC system. We use state-of-the-art HEPA-filtered vacuums and specialized agitation tools to ensure every inch of your ductwork is pristine. This service is essential for maintaining high indoor air quality and ensuring your HVAC system operates at peak efficiency.',
+          benefits: ['Improved Air Quality', 'Energy Efficiency', 'Reduced Allergens', 'Extended HVAC Life'],
+          price: 'From $299',
+          iconName: 'Wind',
+          image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ec3?auto=format&fit=crop&q=80&w=1200',
+          color: 'bg-blue-50 text-blue-600',
+          ctaText: 'Book Now',
+          order: 0
+        },
+        {
+          title: 'HVAC Restoration',
+          shortDescription: 'We restore your HVAC system to factory-new condition, improving performance and extending its lifespan.',
+          fullDescription: 'We restore your HVAC system to factory-new condition, improving performance and extending its lifespan. Our restoration process involves deep cleaning of coils, blowers, and internal components, followed by the application of protective coatings to prevent future corrosion and microbial growth.',
+          benefits: ['System Longevity', 'Peak Performance', 'Cost Savings', 'Corrosion Protection'],
+          price: 'From $499',
+          iconName: 'Shield',
+          image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=1200',
+          color: 'bg-green-50 text-green-600',
+          ctaText: 'Book Now',
+          order: 1
+        },
+        {
+          title: 'Dryer Vent Cleaning',
+          shortDescription: 'Prevent dryer fires and improve drying efficiency with our professional vent cleaning service.',
+          fullDescription: 'Prevent dryer fires and improve drying efficiency with our professional vent cleaning service. Lint buildup in dryer vents is a leading cause of household fires. Our high-pressure cleaning removes all obstructions, allowing your dryer to breathe and reducing drying times significantly.',
+          benefits: ['Fire Prevention', 'Faster Drying', 'Energy Savings', 'Dryer Longevity'],
+          price: 'From $129',
+          iconName: 'Sparkles',
+          image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=1200',
+          color: 'bg-orange-50 text-orange-600',
+          ctaText: 'Book Now',
+          order: 2
+        },
+        {
+          title: 'Coil Cleaning & Maintenance',
+          shortDescription: 'Professional cleaning of evaporator and condenser coils to maximize heat transfer and efficiency.',
+          fullDescription: 'Dirty coils can increase energy consumption by up to 30%. Our professional coil cleaning service removes dirt, debris, and oxidation from both evaporator and condenser coils, ensuring maximum heat transfer and reducing the load on your compressor.',
+          benefits: ['Lower Energy Bills', 'Better Cooling', 'Compressor Protection', 'System Reliability'],
+          price: 'From $199',
+          iconName: 'Droplets',
+          image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&q=80&w=1200',
+          color: 'bg-cyan-50 text-cyan-600',
+          ctaText: 'Schedule Now',
+          order: 3
+        },
+        {
+          title: 'Damage Restoration',
+          shortDescription: 'Expert cleaning and restoration of HVAC systems following fire, water, or mold damage.',
+          fullDescription: 'When disaster strikes, your HVAC system can become a distribution point for contaminants. Our expert team specializes in the thorough cleaning and decontamination of systems affected by fire, water, or mold damage, restoring safety and air quality to your property.',
+          benefits: ['Odor Removal', 'Contaminant Elimination', 'Safe Re-occupancy', 'Insurance Coordination'],
+          price: 'Custom Quote',
+          iconName: 'Activity',
+          image: 'https://images.unsplash.com/photo-1584622781564-1d987f7333c1?auto=format&fit=crop&q=80&w=1200',
+          color: 'bg-red-50 text-red-600',
+          ctaText: 'Get Quote',
+          order: 4
+        }
+      ];
+
+      try {
+        for (const service of initialServices) {
+          await addDoc(collection(db, 'services'), {
+            ...service,
+            createdAt: new Date()
+          });
+        }
+        toast.success('5 services seeded successfully!');
+      } catch (error: any) {
+        console.error('Error seeding services:', error);
+        toast.error(`Failed to seed services: ${error.message || 'Unknown error'}`);
+      }
+    };
+
     if (services.length > 0) {
-      if (!window.confirm('Services already exist. Do you want to add the initial 5 services anyway?')) {
-        return;
-      }
-    }
-
-    const initialServices = [
-      {
-        title: 'Air Duct Cleaning',
-        shortDescription: 'Our comprehensive air duct cleaning removes dust, allergens, and microbial growth from your entire HVAC system.',
-        fullDescription: 'Our comprehensive air duct cleaning removes dust, allergens, and microbial growth from your entire HVAC system. We use state-of-the-art HEPA-filtered vacuums and specialized agitation tools to ensure every inch of your ductwork is pristine. This service is essential for maintaining high indoor air quality and ensuring your HVAC system operates at peak efficiency.',
-        benefits: ['Improved Air Quality', 'Energy Efficiency', 'Reduced Allergens', 'Extended HVAC Life'],
-        price: 'From $299',
-        iconName: 'Wind',
-        image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ec3?auto=format&fit=crop&q=80&w=1200',
-        color: 'bg-blue-50 text-blue-600',
-        ctaText: 'Book Now',
-        order: 0
-      },
-      {
-        title: 'HVAC Restoration',
-        shortDescription: 'We restore your HVAC system to factory-new condition, improving performance and extending its lifespan.',
-        fullDescription: 'We restore your HVAC system to factory-new condition, improving performance and extending its lifespan. Our restoration process involves deep cleaning of coils, blowers, and internal components, followed by the application of protective coatings to prevent future corrosion and microbial growth.',
-        benefits: ['System Longevity', 'Peak Performance', 'Cost Savings', 'Corrosion Protection'],
-        price: 'From $499',
-        iconName: 'Shield',
-        image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=1200',
-        color: 'bg-green-50 text-green-600',
-        ctaText: 'Book Now',
-        order: 1
-      },
-      {
-        title: 'Dryer Vent Cleaning',
-        shortDescription: 'Prevent dryer fires and improve drying efficiency with our professional vent cleaning service.',
-        fullDescription: 'Prevent dryer fires and improve drying efficiency with our professional vent cleaning service. Lint buildup in dryer vents is a leading cause of household fires. Our high-pressure cleaning removes all obstructions, allowing your dryer to breathe and reducing drying times significantly.',
-        benefits: ['Fire Prevention', 'Faster Drying', 'Energy Savings', 'Dryer Longevity'],
-        price: 'From $129',
-        iconName: 'Sparkles',
-        image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=1200',
-        color: 'bg-orange-50 text-orange-600',
-        ctaText: 'Book Now',
-        order: 2
-      },
-      {
-        title: 'Coil Cleaning & Maintenance',
-        shortDescription: 'Professional cleaning of evaporator and condenser coils to maximize heat transfer and efficiency.',
-        fullDescription: 'Dirty coils can increase energy consumption by up to 30%. Our professional coil cleaning service removes dirt, debris, and oxidation from both evaporator and condenser coils, ensuring maximum heat transfer and reducing the load on your compressor.',
-        benefits: ['Lower Energy Bills', 'Better Cooling', 'Compressor Protection', 'System Reliability'],
-        price: 'From $199',
-        iconName: 'Droplets',
-        image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&q=80&w=1200',
-        color: 'bg-cyan-50 text-cyan-600',
-        ctaText: 'Schedule Now',
-        order: 3
-      },
-      {
-        title: 'Indoor Air Quality Testing',
-        shortDescription: 'Scientific testing of your indoor air to identify pollutants, allergens, and humidity issues.',
-        fullDescription: 'Know exactly what you are breathing. Our IAQ testing service provides a detailed report on particulate matter, VOCs, CO2 levels, and humidity. We provide actionable recommendations to improve your environment and protect your health.',
-        benefits: ['Health Protection', 'Pollutant ID', 'Humidity Control', 'Expert Advice'],
-        price: 'From $249',
-        iconName: 'CheckCircle',
-        image: 'https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?auto=format&fit=crop&q=80&w=1200',
-        color: 'bg-slate-50 text-slate-600',
-        ctaText: 'Get Tested',
-        order: 4
-      }
-    ];
-
-    try {
-      for (const service of initialServices) {
-        await addDoc(collection(db, 'services'), {
-          ...service,
-          createdAt: new Date()
-        });
-      }
-      toast.success('Initial services seeded successfully!');
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to seed services.');
+      showConfirm(
+        'Seed Services',
+        'Services already exist. Do you want to add the initial 5 services anyway?',
+        seed
+      );
+    } else {
+      seed();
     }
   };
-
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -766,7 +923,7 @@ function ServicesManager() {
   );
 }
 
-function BlogManager() {
+function BlogManager({ showConfirm }: { showConfirm: (title: string, message: string, onConfirm: () => void) => void }) {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
@@ -829,15 +986,19 @@ function BlogManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      try {
-        await deleteDoc(doc(db, 'blog_posts', id));
-        toast.success('Post deleted!');
-      } catch (error: any) {
-        console.error('Error deleting post:', error);
-        toast.error(`Failed to delete post: ${error.message || 'Unknown error'}`);
+    showConfirm(
+      'Delete Blog Post',
+      'Are you sure you want to delete this post? This action cannot be undone.',
+      async () => {
+        try {
+          await deleteDoc(doc(db, 'blog_posts', id));
+          toast.success('Post deleted!');
+        } catch (error: any) {
+          console.error('Error deleting post:', error);
+          toast.error(`Failed to delete post: ${error.message || 'Unknown error'}`);
+        }
       }
-    }
+    );
   };
 
   const handleSubmit = async (e: any) => {
@@ -990,20 +1151,24 @@ function BlogManager() {
       }
     ];
 
-    if (window.confirm(`This will add 5 sample blog posts to your database. Continue?`)) {
-      try {
-        for (const post of seedData) {
-          await addDoc(collection(db, 'blog_posts'), {
-            ...post,
-            created_at: Timestamp.now()
-          });
+    showConfirm(
+      'Seed Blog Posts',
+      'This will add 5 sample blog posts to your database. Continue?',
+      async () => {
+        try {
+          for (const post of seedData) {
+            await addDoc(collection(db, 'blog_posts'), {
+              ...post,
+              created_at: Timestamp.now()
+            });
+          }
+          toast.success('5 blog posts seeded successfully!');
+        } catch (error: any) {
+          console.error('Error seeding blog posts:', error);
+          toast.error(`Failed to seed blog posts: ${error.message || 'Unknown error'}`);
         }
-        toast.success('5 blog posts seeded successfully!');
-      } catch (error: any) {
-        console.error('Error seeding blog posts:', error);
-        toast.error(`Failed to seed blog posts: ${error.message || 'Unknown error'}`);
       }
-    }
+    );
   };
 
   return (
@@ -1234,7 +1399,7 @@ function BlogManager() {
   );
 }
 
-function PageContentManager() {
+function PageContentManager({ showConfirm }: { showConfirm: (title: string, message: string, onConfirm: () => void) => void }) {
   const [activeTab, setActiveTab] = useState<'homepage' | 'about' | 'contact'>('homepage');
   const [content, setContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1820,6 +1985,54 @@ function PageContentManager() {
 }
 
 function SettingsManager() {
+  const [settings, setSettings] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSettings(docSnap.data());
+      } else {
+        setSettings({
+          contact: {
+            phone: '(800) 555-0199',
+            email: 'info@aircarepro.com',
+            address: '123 Clean Air Way, Suite 100, Houston, TX 77001'
+          },
+          social: {
+            facebook: '',
+            instagram: '',
+            linkedin: '',
+            twitter: ''
+          },
+          payment: {
+            googleWalletMerchantId: '',
+            enableGoogleWallet: false,
+            currency: 'USD'
+          }
+        });
+      }
+      setLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  const handleSave = async (section: string, data: any) => {
+    try {
+      const { setDoc } = await import('firebase/firestore');
+      await setDoc(doc(db, 'settings', 'global'), {
+        ...settings,
+        [section]: data
+      });
+      toast.success(`${section} settings updated successfully!`);
+    } catch (error: any) {
+      console.error('Error updating settings:', error);
+      toast.error(`Failed to update ${section} settings: ${error.message}`);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center p-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-1">
@@ -1828,42 +2041,141 @@ function SettingsManager() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Contact Information */}
         <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col gap-8">
           <h3 className="text-xl font-bold text-slate-900">Contact Information</h3>
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Phone Number</label>
-              <input type="text" defaultValue="(800) 555-0199" className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input 
+                type="text" 
+                value={settings?.contact?.phone || ''} 
+                onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, phone: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Email Address</label>
-              <input type="email" defaultValue="info@aircarepro.com" className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input 
+                type="email" 
+                value={settings?.contact?.email || ''} 
+                onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, email: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Physical Address</label>
-              <textarea defaultValue="123 Clean Air Way, Suite 100, Houston, TX 77001" className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" rows={3} />
+              <textarea 
+                value={settings?.contact?.address || ''} 
+                onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, address: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" 
+                rows={3} 
+              />
             </div>
           </div>
-          <button className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all w-fit">Save Changes</button>
+          <button 
+            onClick={() => handleSave('contact', settings.contact)}
+            className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all w-fit"
+          >
+            Save Contact Info
+          </button>
         </div>
 
+        {/* Social Links */}
         <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col gap-8">
           <h3 className="text-xl font-bold text-slate-900">Social Links</h3>
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Facebook URL</label>
-              <input type="text" placeholder="https://facebook.com/..." className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input 
+                type="text" 
+                placeholder="https://facebook.com/..." 
+                value={settings?.social?.facebook || ''} 
+                onChange={(e) => setSettings({ ...settings, social: { ...settings.social, facebook: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Instagram URL</label>
-              <input type="text" placeholder="https://instagram.com/..." className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input 
+                type="text" 
+                placeholder="https://instagram.com/..." 
+                value={settings?.social?.instagram || ''} 
+                onChange={(e) => setSettings({ ...settings, social: { ...settings.social, instagram: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">LinkedIn URL</label>
-              <input type="text" placeholder="https://linkedin.com/..." className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input 
+                type="text" 
+                placeholder="https://linkedin.com/..." 
+                value={settings?.social?.linkedin || ''} 
+                onChange={(e) => setSettings({ ...settings, social: { ...settings.social, linkedin: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
           </div>
-          <button className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all w-fit">Save Changes</button>
+          <button 
+            onClick={() => handleSave('social', settings.social)}
+            className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all w-fit"
+          >
+            Save Social Links
+          </button>
+        </div>
+
+        {/* Payment Settings (Google Wallet) */}
+        <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col gap-8">
+          <h3 className="text-xl font-bold text-slate-900">Payment Settings (Google Wallet)</h3>
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="flex flex-col gap-1">
+                <span className="font-bold text-slate-900">Enable Google Wallet</span>
+                <span className="text-xs text-slate-500">Allow customers to pay via Google Wallet</span>
+              </div>
+              <button 
+                onClick={() => setSettings({ ...settings, payment: { ...settings.payment, enableGoogleWallet: !settings.payment.enableGoogleWallet } })}
+                className={cn(
+                  "w-14 h-8 rounded-full transition-all relative",
+                  settings?.payment?.enableGoogleWallet ? "bg-blue-600" : "bg-slate-300"
+                )}
+              >
+                <div className={cn(
+                  "absolute top-1 w-6 h-6 bg-white rounded-full transition-all",
+                  settings?.payment?.enableGoogleWallet ? "left-7" : "left-1"
+                )} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Google Wallet Merchant ID</label>
+              <input 
+                type="text" 
+                placeholder="Enter your Merchant ID" 
+                value={settings?.payment?.googleWalletMerchantId || ''} 
+                onChange={(e) => setSettings({ ...settings, payment: { ...settings.payment, googleWalletMerchantId: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Currency</label>
+              <select 
+                value={settings?.payment?.currency || 'USD'} 
+                onChange={(e) => setSettings({ ...settings, payment: { ...settings.payment, currency: e.target.value } })}
+                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="USD">USD - US Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="GBP">GBP - British Pound</option>
+                <option value="CAD">CAD - Canadian Dollar</option>
+              </select>
+            </div>
+          </div>
+          <button 
+            onClick={() => handleSave('payment', settings.payment)}
+            className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all w-fit"
+          >
+            Save Payment Settings
+          </button>
         </div>
       </div>
     </div>

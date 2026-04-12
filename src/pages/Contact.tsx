@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Phone, Mail, MapPin, Send, CheckCircle, Facebook, Twitter, Instagram, Linkedin, Loader2 } from 'lucide-react';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { Service } from '../types';
@@ -31,7 +31,7 @@ export default function Contact() {
       }
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching page content:", error);
+      handleFirestoreError(error, OperationType.GET, 'page_content/contact');
       setLoading(false);
     });
 
@@ -39,7 +39,7 @@ export default function Contact() {
     const unsubServices = onSnapshot(qServices, (snapshot) => {
       setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service)));
     }, (error) => {
-      console.error("Error fetching services:", error);
+      handleFirestoreError(error, OperationType.LIST, 'services');
     });
 
     return () => {
@@ -59,7 +59,11 @@ export default function Contact() {
         status: 'new',
         createdAt: serverTimestamp(),
       });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'leads');
+    }
 
+    try {
       // 2. Send Email Notification via Netlify Function
       try {
         await fetch('/.netlify/functions/send-email', {

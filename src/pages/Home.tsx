@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { 
   Shield, 
   CheckCircle, 
   Star, 
-  ArrowRight, 
+  ArrowRight,
+  ArrowDown,
   Wind, 
   Sparkles, 
   Phone, 
@@ -16,12 +18,15 @@ import {
   Droplets,
   Clock,
   Users,
-  Play
+  Play,
+  Calendar,
+  Search,
+  Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import ServiceAreas from '../components/ServiceAreas';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, orderBy, limit, onSnapshot, doc } from 'firebase/firestore';
 import { Service, BlogPost } from '../types';
 
@@ -118,7 +123,7 @@ export default function Home() {
     const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       setLatestPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogPost)));
     }, (error) => {
-      console.error("Error fetching latest blog posts:", error);
+      handleFirestoreError(error, OperationType.LIST, 'blog_posts');
     });
 
     // Fetch top 3 services for preview
@@ -131,7 +136,7 @@ export default function Home() {
     const unsubServices = onSnapshot(qServices, (snapshot) => {
       setServicesList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service)));
     }, (error) => {
-      console.error("Error fetching services:", error);
+      handleFirestoreError(error, OperationType.LIST, 'services');
     });
 
     // Fetch page content
@@ -141,7 +146,7 @@ export default function Home() {
       }
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching page content:", error);
+      handleFirestoreError(error, OperationType.GET, 'page_content/homepage');
       setLoading(false);
     });
 
@@ -418,6 +423,172 @@ export default function Home() {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Before/After Slider Section */}
+      <section className="py-24 bg-slate-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <motion.span
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-blue-600 font-bold tracking-widest uppercase text-sm"
+            >
+              See the Difference
+            </motion.span>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mt-4"
+            >
+              Transform Your Air Quality
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mt-6 leading-relaxed"
+            >
+              Visualize the impact of professional cleaning. Our advanced equipment removes years of hidden buildup, ensuring a healthier environment for your family.
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Air Duct Cleaning Slider */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="flex flex-col gap-6"
+            >
+              <div className="rounded-[32px] overflow-hidden shadow-2xl border-4 border-white aspect-[3/2]">
+                <ReactCompareSlider
+                  itemOne={<ReactCompareSliderImage src="https://q3zyn4woatazi.ok.kimi.link/images/before-duct.jpg" alt="Air Duct Before" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  itemTwo={<ReactCompareSliderImage src="https://q3zyn4woatazi.ok.kimi.link/images/after-duct.jpg" alt="Air Duct After" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  className="h-full"
+                />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-900">Air Duct Cleaning</h3>
+                <p className="text-slate-500 font-medium">Removing years of dust and microbial growth</p>
+              </div>
+            </motion.div>
+
+            {/* Dryer Vent Cleaning Slider */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col gap-6"
+            >
+              <div className="rounded-[32px] overflow-hidden shadow-2xl border-4 border-white aspect-[3/2]">
+                <ReactCompareSlider
+                  itemOne={<ReactCompareSliderImage src="https://i.ibb.co/mrTLCkfG/Screenshot-2026-0412-144522.png" alt="Dryer Vent Before" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  itemTwo={<ReactCompareSliderImage src="https://i.ibb.co/8gjkbTjs/Screenshot-2026-0412-144542.png" alt="Dryer Vent After" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  className="h-full"
+                />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-900">Dryer Vent Cleaning</h3>
+                <p className="text-slate-500 font-medium">Eliminating fire hazards and improving efficiency</p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-24 bg-[#f8fafc]">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <motion.span
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-blue-600 font-bold tracking-widest uppercase text-sm"
+            >
+              Our Process
+            </motion.span>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-5xl font-bold text-blue-600 tracking-tight mt-4"
+            >
+              OUR PROCESS
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mt-6 leading-relaxed"
+            >
+              Professional air duct cleaning in four simple steps
+            </motion.p>
+          </div>
+
+          <div className="flex flex-col md:flex-row items-stretch justify-center gap-4 md:gap-0">
+            {[
+              {
+                title: 'Free Inspection',
+                desc: 'We assess your HVAC system and provide a detailed report with upfront pricing.',
+                step: 1
+              },
+              {
+                title: 'Schedule Service',
+                desc: 'Choose a convenient time. We offer flexible scheduling including weekends.',
+                step: 2
+              },
+              {
+                title: 'Professional Cleaning',
+                desc: 'Our certified technicians complete the job using industry-leading equipment.',
+                step: 3
+              },
+              {
+                title: 'Enjoy Clean Air',
+                desc: 'Breathe easier with improved air quality and energy efficiency.',
+                step: 4
+              }
+            ].map((item, index, array) => (
+              <div key={index} className="flex flex-col md:flex-row items-center w-full md:flex-1">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -4 }}
+                  className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] transition-all duration-300 w-full h-full"
+                >
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#0f3b5e] text-white flex items-center justify-center text-xl font-bold shrink-0 mb-6">
+                    {item.step}
+                  </div>
+                  <div className="flex flex-col items-center gap-3">
+                    <h3 className="text-xl font-semibold text-[#0f3b5e] leading-tight">{item.title}</h3>
+                    <p className="text-[#334155] text-sm leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </motion.div>
+                
+                {index < array.length - 1 && (
+                  <div className="flex items-center justify-center py-6 md:py-0 md:px-2 z-10">
+                    <div className="w-10 h-10 rounded-full bg-[#e0edf5] flex items-center justify-center text-[#0f3b5e] shadow-sm shrink-0">
+                      <ArrowRight className="hidden md:block" size={20} />
+                      <ArrowDown className="md:hidden" size={20} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>

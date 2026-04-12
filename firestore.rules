@@ -1,6 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -9,23 +12,63 @@ service cloud.firestore {
       return isAuthenticated() &&
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         request.auth.token.email == "munibmmlm@gmail.com");
+         (request.auth.token.email == "munibmmlm@gmail.com" && request.auth.token.email_verified == true));
     }
 
-    // Allow public read access to all collections as requested
-    // Allow write access only to authenticated admins
-    match /{collection}/{document} {
+    function isValidString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidLead(data) {
+      return data.keys().hasAll(['name', 'email', 'service', 'status', 'createdAt']) &&
+             isValidString(data.name, 100) &&
+             isValidEmail(data.email) &&
+             isValidString(data.service, 100) &&
+             data.status in ['new', 'contacted', 'completed', 'cancelled'] &&
+             data.createdAt is timestamp &&
+             (!('message' in data) || isValidString(data.message, 2000)) &&
+             (!('phone' in data) || isValidString(data.phone, 20));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Public read access for content collections
+    match /services/{serviceId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Special case for leads creation (public can submit contact form)
+    match /blog_posts/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /page_content/{pageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Leads creation (public can submit contact form)
     match /leads/{leadId} {
-      allow create: if true;
+      allow create: if isValidLead(request.resource.data);
       allow read, update, delete: if isAdmin();
     }
 
-    // Special case for users (only admin can manage users, but users can read their own profile if needed)
+    // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow write: if isAdmin();

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { Wind, Shield, Sparkles, Droplets, Flame, Construction, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import ServiceAreas from '../components/ServiceAreas';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, getDocs } from 'firebase/firestore';
 import { Service } from '../types';
 
@@ -31,7 +32,7 @@ export default function Services() {
       setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Service)));
       setLoading(false);
     }, (error) => {
-      console.error('Error fetching services:', error);
+      handleFirestoreError(error, OperationType.LIST, 'services');
       setLoading(false);
     });
     return unsub;
@@ -128,6 +129,81 @@ export default function Services() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* Before/After Slider Section */}
+        <div className="mt-32">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <motion.span
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-blue-600 font-bold tracking-widest uppercase text-sm"
+            >
+              See the Difference
+            </motion.span>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mt-4"
+            >
+              Transform Your Air Quality
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="text-xl text-slate-600 mt-6 leading-relaxed"
+            >
+              Visualize the impact of professional cleaning. Our advanced equipment removes years of hidden buildup, ensuring a healthier environment for your family.
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Air Duct Cleaning Slider */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="flex flex-col gap-6"
+            >
+              <div className="rounded-[32px] overflow-hidden shadow-2xl border-4 border-white aspect-[3/2]">
+                <ReactCompareSlider
+                  itemOne={<ReactCompareSliderImage src="https://q3zyn4woatazi.ok.kimi.link/images/before-duct.jpg" alt="Air Duct Before" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  itemTwo={<ReactCompareSliderImage src="https://q3zyn4woatazi.ok.kimi.link/images/after-duct.jpg" alt="Air Duct After" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  className="h-full"
+                />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-900">Air Duct Cleaning</h3>
+                <p className="text-slate-500 font-medium">Removing years of dust and microbial growth</p>
+              </div>
+            </motion.div>
+
+            {/* Dryer Vent Cleaning Slider */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col gap-6"
+            >
+              <div className="rounded-[32px] overflow-hidden shadow-2xl border-4 border-white aspect-[3/2]">
+                <ReactCompareSlider
+                  itemOne={<ReactCompareSliderImage src="https://i.ibb.co/mrTLCkfG/Screenshot-2026-0412-144522.png" alt="Dryer Vent Before" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  itemTwo={<ReactCompareSliderImage src="https://i.ibb.co/8gjkbTjs/Screenshot-2026-0412-144542.png" alt="Dryer Vent After" referrerPolicy="no-referrer" style={{ objectFit: 'cover' }} />}
+                  className="h-full"
+                />
+              </div>
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-slate-900">Dryer Vent Cleaning</h3>
+                <p className="text-slate-500 font-medium">Eliminating fire hazards and improving efficiency</p>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         <ServiceAreas />

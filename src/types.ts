@@ -7,6 +7,7 @@ export interface Service {
   price: string;
   image: string;
   ctaText: string;
+  iconName: string;
   order: number;
 }
 
