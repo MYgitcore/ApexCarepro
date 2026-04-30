@@ -12,6 +12,7 @@ import {
   XCircle, 
   Download, 
   Search,
+  Eye,
   Wind,
   Shield,
   Sparkles,
@@ -342,6 +343,7 @@ function DashboardOverview({ showConfirm }: { showConfirm: (title: string, messa
 function LeadsManager({ showConfirm }: { showConfirm: (title: string, message: string, onConfirm: () => void) => void }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filter, setFilter] = useState('');
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
@@ -402,7 +404,7 @@ function LeadsManager({ showConfirm }: { showConfirm: (title: string, message: s
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `aircare_leads_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `apex_leads_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -469,7 +471,17 @@ function LeadsManager({ showConfirm }: { showConfirm: (title: string, message: s
                     </span>
                   </td>
                   <td className="p-6">
-                    <p className="text-sm text-slate-600 max-w-xs line-clamp-2">{lead.message}</p>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm text-slate-600 max-w-xs line-clamp-2">{lead.message}</p>
+                      {lead.message.length > 50 && (
+                        <button 
+                          onClick={() => setSelectedMessage(lead.message)}
+                          className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700 flex items-center gap-1 w-fit"
+                        >
+                          <Eye size={12} /> Read More
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="p-6">
                     <select
@@ -500,7 +512,41 @@ function LeadsManager({ showConfirm }: { showConfirm: (title: string, message: s
           </table>
         </div>
       </div>
+      {selectedMessage && (
+        <MessageModal message={selectedMessage} onClose={() => setSelectedMessage(null)} />
+      )}
     </div>
+  );
+}
+
+function MessageModal({ message, onClose }: { message: string, onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white w-full max-w-lg rounded-[32px] p-8 shadow-2xl border border-slate-100 flex flex-col gap-6"
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Full Message</h3>
+            <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400">
+              <X size={24} />
+            </button>
+          </div>
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 max-h-[60vh] overflow-y-auto">
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{message}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full py-4 rounded-2xl font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-lg"
+          >
+            Close
+          </button>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }
 

@@ -28,7 +28,7 @@ export default function Logo({
         className={cn(
           isVertical ? "h-24 md:h-32 mb-2" : "h-10 md:h-12",
           "w-auto object-contain transition-transform duration-300 group-hover:scale-105",
-          isFooter && "drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+          isFooter && "bg-white p-1 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-4 ring-white/10"
         )}
         referrerPolicy="no-referrer"
       />

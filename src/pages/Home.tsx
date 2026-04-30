@@ -163,8 +163,8 @@ export default function Home() {
 
   const heroContent = pageContent?.hero || {
     badge: 'Certified HVAC Professionals',
-    title: 'Breathe Cleaner Air with Apex Duct Cleaning',
-    description: 'Professional air duct cleaning and HVAC restoration services for homes and businesses. We improve your health and save you money.',
+    title: 'Cleaner Air, Healthier Home With Apex Duct Cleaning',
+    description: 'Expert air duct cleaning and clinical-grade HVAC restoration for Houston homes and businesses. Engineering a healthier environment for your family.',
     image: 'https://q3zyn4woatazi.ok.kimi.link/images/hero-technician.jpg'
   };
 
@@ -543,8 +543,8 @@ export default function Home() {
           <div className="flex flex-col md:flex-row items-stretch justify-center gap-4 md:gap-0">
             {[
               {
-                title: 'Free Inspection',
-                desc: 'We assess your HVAC system and provide a detailed report with upfront pricing.',
+                title: 'Advanced System Audit',
+                desc: 'Our experts perform a clinical-grade assessment of your HVAC infrastructure and provide a transparent, detailed report.',
                 step: 1
               },
               {
@@ -572,7 +572,7 @@ export default function Home() {
                   whileHover={{ y: -4 }}
                   className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-[0_8px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] transition-all duration-300 w-full h-full"
                 >
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#0f3b5e] text-white flex items-center justify-center text-xl font-bold shrink-0 mb-6">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shrink-0 mb-6 shadow-lg shadow-blue-200">
                     {item.step}
                   </div>
                   <div className="flex flex-col items-center gap-3">
@@ -632,7 +632,7 @@ export default function Home() {
                   transition={{ delay: index * 0.1 }}
                   className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col gap-6"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
                     <ItemIcon size={28} />
                   </div>
                   <div className="flex flex-col gap-3">

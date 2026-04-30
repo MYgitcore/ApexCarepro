@@ -50,6 +50,7 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     setIsSubmitting(true);
 
     try {
@@ -71,8 +72,9 @@ export default function Contact() {
       formSubmitData.append('phone', formData.phone);
       formSubmitData.append('service', formData.service);
       formSubmitData.append('message', formData.message);
-      formSubmitData.append('_subject', 'New Contact Form Submission from Apex Duct Cleaning');
-      formSubmitData.append('_captcha', 'false');
+      formSubmitData.append('_subject', 'Naye Contact Form Submission from Apex Duct Cleaning');
+      formSubmitData.append('_template', 'table');
+      formSubmitData.append('_next', 'https://apexductcleaning.com/thank-you');
       formSubmitData.append('_replyto', formData.email);
 
       const response = await fetch('https://formsubmit.co/ajax/info@apexductcleaning.com', {
@@ -179,10 +181,10 @@ export default function Contact() {
                 className="flex flex-col gap-8"
               >
                 {/* FormSubmit Configuration */}
-                <input type="hidden" name="_subject" value="New Contact Form Submission from Apex Duct Cleaning" />
-                <input type="hidden" name="_captcha" value="false" />
-                <input type="hidden" name="_next" value={window.location.origin + "/contact"} />
+                <input type="hidden" name="_subject" value="Naye Contact Form Submission from Apex Duct Cleaning" />
+                <input type="hidden" name="_next" value="https://apexductcleaning.com/thank-you" />
                 <input type="hidden" name="_template" value="table" />
+                <input type="hidden" name="_replyto" value={formData.email} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">

@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://aircarepro.netlify.app/sitemap.xml
+Sitemap: https://apexductcleaning.com/sitemap.xml
