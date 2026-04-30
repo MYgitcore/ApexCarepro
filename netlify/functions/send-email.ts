@@ -5,7 +5,16 @@ export const handler = async (event: any) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY || 're_PUU7ZTcw_NKagVZgQpDkB619X6dBwwyLd');
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error('Missing RESEND_API_KEY environment variable');
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ error: 'Email service configuration error' }) 
+    };
+  }
+
+  const resend = new Resend(apiKey);
   const { name, email, phone, service, message } = JSON.parse(event.body);
 
   console.log('Sending email lead for:', name, 'to:', 'munibmmlm@gmail.com');

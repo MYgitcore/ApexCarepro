@@ -53,38 +53,40 @@ export default function Contact() {
     setIsSubmitting(true);
 
     try {
-      // 1. Store in Firestore
+      // 1. Store in Firestore (Backup)
       await addDoc(collection(db, 'leads'), {
         ...formData,
         status: 'new',
         createdAt: serverTimestamp(),
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'leads');
+      console.error('Firestore backup error:', error);
     }
 
     try {
-      // 2. Send Email Notification via Netlify Function
-      try {
-        const response = await fetch('/.netlify/functions/send-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Email error response:', errorData);
-        }
-      } catch (emailError) {
-        console.error('Error sending email notification:', emailError);
-      }
+      // 2. Send email via FormSubmit.co (AJAX mode)
+      const formSubmitData = new FormData();
+      formSubmitData.append('name', formData.name);
+      formSubmitData.append('email', formData.email);
+      formSubmitData.append('phone', formData.phone);
+      formSubmitData.append('service', formData.service);
+      formSubmitData.append('message', formData.message);
+      formSubmitData.append('_subject', 'New Contact Form Submission from Apex Duct Cleaning');
+      formSubmitData.append('_captcha', 'false');
+      formSubmitData.append('_replyto', formData.email);
+
+      const response = await fetch('https://formsubmit.co/ajax/info@apexductcleaning.com', {
+        method: 'POST',
+        body: formSubmitData,
+      });
       
-      setIsSuccess(true);
-      toast.success('Message sent successfully! We will contact you soon.');
-      setFormData({ name: '', email: '', phone: '', service: '', message: '' });
+      if (response.ok) {
+        setIsSuccess(true);
+        toast.success('Message sent successfully! We will contact you soon.');
+        setFormData({ name: '', email: '', phone: '', service: '', message: '' });
+      } else {
+        throw new Error('FormSubmit error');
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message. Please try again.');
@@ -170,11 +172,24 @@ export default function Contact() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+              <form 
+                onSubmit={handleSubmit} 
+                action="https://formsubmit.co/info@apexductcleaning.com" 
+                method="POST"
+                className="flex flex-col gap-8"
+              >
+                {/* FormSubmit Configuration */}
+                <input type="hidden" name="_subject" value="New Contact Form Submission from Apex Duct Cleaning" />
+                <input type="hidden" name="_captcha" value="false" />
+                <input type="hidden" name="_next" value={window.location.origin + "/contact"} />
+                <input type="hidden" name="_template" value="table" />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Full Name</label>
+                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest" htmlFor="name">Full Name</label>
                     <input
+                      id="name"
+                      name="name"
                       required
                       type="text"
                       value={formData.name}
@@ -184,8 +199,10 @@ export default function Contact() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Email Address</label>
+                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest" htmlFor="email">Email Address</label>
                     <input
+                      id="email"
+                      name="email"
                       required
                       type="email"
                       value={formData.email}
@@ -198,8 +215,10 @@ export default function Contact() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Phone Number</label>
+                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest" htmlFor="phone">Phone Number</label>
                     <input
+                      id="phone"
+                      name="phone"
                       required
                       type="tel"
                       value={formData.phone}
@@ -209,8 +228,10 @@ export default function Contact() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Select Service</label>
+                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest" htmlFor="service">Select Service</label>
                     <select
+                      id="service"
+                      name="service"
                       required
                       value={formData.service}
                       onChange={(e) => setFormData({ ...formData, service: e.target.value })}
@@ -225,8 +246,10 @@ export default function Contact() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Your Message</label>
+                  <label className="text-sm font-bold text-slate-700 uppercase tracking-widest" htmlFor="message">Your Message</label>
                   <textarea
+                    id="message"
+                    name="message"
                     required
                     rows={5}
                     value={formData.message}
