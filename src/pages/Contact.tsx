@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useSearchParams } from 'react-router-dom';
-import { Phone, Mail, MapPin, Send, CheckCircle, Facebook, Twitter, Instagram, Linkedin, Loader2 } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, CheckCircle, Facebook, Twitter, Instagram, Linkedin, Loader2, MessageCircle } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -53,7 +53,7 @@ export default function Contact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     setIsSubmitting(true);
 
     try {
@@ -84,7 +84,7 @@ export default function Contact() {
         method: 'POST',
         body: formSubmitData,
       });
-      
+
       if (response.ok) {
         setIsSuccess(true);
         toast.success('Message sent successfully! We will contact you soon.');
@@ -121,17 +121,17 @@ export default function Contact() {
     ...(content?.info || {
       title: 'Get in Touch',
       description: 'Have questions about our services or need to schedule an inspection? Our team is here to help you breathe easier.',
-      phone: '888-850-5817',
+      phone: '(608) 925-0728',
       email: 'info@apexductcleaning.com',
       address: '123 Air Quality Way, Suite 100, Houston, TX 77001'
     }),
-    phone: '888-850-5817'
+    phone: '(608) 925-0728'
   };
 
   const contactItems = [
-    { icon: Phone, label: 'Call Us', value: contactInfo.phone, href: `tel:${contactInfo.phone.replace(/\D/g, '')}`, color: 'bg-blue-100 text-blue-600' },
-    { icon: Mail, label: 'Email Us', value: contactInfo.email, href: `mailto:${contactInfo.email}`, color: 'bg-green-100 text-green-600' },
-    { icon: MapPin, label: 'Visit Us', value: contactInfo.address, color: 'bg-orange-100 text-orange-600' },
+    { icon: MessageCircle, label: 'WhatsApp', value: '(608) 925-0728', href: 'https://wa.me/16089250728?text=Hello%2C%20I%27m%20interested%20in%20your%20duct%20cleaning%20services', color: 'bg-blue-100 text-blue-600' },
+    { icon: Mail, label: 'Email Us', value: contactInfo.email, href: `mailto:${contactInfo.email}`, color: 'bg-blue-100 text-blue-600' },
+    { icon: MapPin, label: 'Visit Us', value: contactInfo.address, color: 'bg-blue-100 text-blue-600' },
   ];
 
   return (
@@ -188,9 +188,9 @@ export default function Contact() {
                 </button>
               </div>
             ) : (
-              <form 
-                onSubmit={handleSubmit} 
-                action="https://formsubmit.co/info@apexductcleaning.com" 
+              <form
+                onSubmit={handleSubmit}
+                action="https://formsubmit.co/info@apexductcleaning.com"
                 method="POST"
                 className="flex flex-col gap-8"
               >
@@ -294,7 +294,7 @@ export default function Contact() {
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-6 md:p-8 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-4 md:gap-6 hover:bg-white hover:shadow-xl transition-all"
+                className="p-6 md:p-8 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-4 md:gap-6 hover:bg-white hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 transition-all duration-300"
               >
                 <div className={`p-4 rounded-2xl ${info.color} shrink-0`}>
                   <info.icon size={24} />
@@ -302,8 +302,8 @@ export default function Contact() {
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm text-slate-500 font-bold uppercase tracking-widest">{info.label}</span>
                   {info.href ? (
-                    <a 
-                      href={info.href} 
+                    <a
+                      href={info.href}
                       className="text-lg font-bold text-[#0f3b5e] hover:text-blue-600 hover:underline transition-all break-all"
                     >
                       {info.value}
@@ -317,9 +317,9 @@ export default function Contact() {
 
             {/* Support Image Placeholder */}
             <div className="mt-4 rounded-3xl overflow-hidden shadow-lg h-80 bg-slate-200 relative group">
-              <img 
-                src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=800" 
-                alt="Friendly HVAC Technician" 
+              <img
+                src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=800"
+                alt="Friendly HVAC Technician"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 referrerPolicy="no-referrer"
                 loading="lazy"
@@ -329,17 +329,19 @@ export default function Contact() {
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-slate-900/40 backdrop-blur-[2px]">
                 <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center mb-4 shadow-xl animate-bounce">
-                  <Phone size={32} />
+                  <MessageCircle size={32} />
                 </div>
                 <h4 className="text-2xl font-bold text-white mb-2">Expert Support</h4>
                 <p className="text-blue-50 font-medium leading-relaxed">
                   Our certified technicians are ready to help you with all your HVAC needs.
                 </p>
-                <a 
-                  href={`tel:${contactInfo.phone.replace(/\D/g, '')}`}
+                <a
+                  href="https://wa.me/16089250728?text=Hello%2C%20I%27m%20interested%20in%20your%20duct%20cleaning%20services"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-6 bg-white text-blue-600 px-6 py-2 rounded-full font-bold text-sm hover:bg-blue-50 transition-all shadow-lg"
                 >
-                  Call Now
+                  Chat on WhatsApp
                 </a>
               </div>
             </div>
