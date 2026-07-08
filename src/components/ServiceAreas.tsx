@@ -43,7 +43,7 @@ export default function ServiceAreas() {
               <div className="flex flex-col gap-4">
                 <span className="text-blue-400 font-bold tracking-widest uppercase text-sm">Major Metros & Coverage Area</span>
                 <h2 className="text-4xl md:text-6xl font-bold text-white tracking-tight">
-                  TEXAS Service Zone
+                  USA Services Zone
                 </h2>
                 <p className="text-xl text-slate-400 leading-relaxed max-w-xl">
                   We provide professional HVAC cleaning services across the greater metropolitan area and surrounding communities.
